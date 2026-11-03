@@ -1,0 +1,57 @@
+name: Build HeadunitPad for iPadOS 15
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Check out the iPadOS 15 branch
+        uses: actions/checkout@v4
+
+      - name: Apply the iPadOS 15 compatibility patch
+        run: |
+          cp HeadunitPad-ios15.patch "$RUNNER_TEMP/HeadunitPad-ios15.patch"
+          git checkout --detach 57f338f1a38753787d5e2dc762d9e46aabe6f0b3
+          git apply "$RUNNER_TEMP/HeadunitPad-ios15.patch"
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 16.4
+
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods
+          pod install
+
+      - name: Build unsigned app
+        run: |
+          xcodebuild \
+            -workspace HeadunitPad.xcworkspace \
+            -scheme HeadunitPad \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package IPA
+        run: |
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/HeadunitPad.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/HeadunitPad.app"
+          cd "$RUNNER_TEMP/ipa"
+          /usr/bin/zip -qry HeadunitPad-iPadOS15-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: HeadunitPad-iPadOS15-unsigned
+          path: ${{ runner.temp }}/ipa/HeadunitPad-iPadOS15-unsigned.ipa
+          if-no-files-found: error
