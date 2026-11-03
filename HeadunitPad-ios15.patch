@@ -1,0 +1,210 @@
+diff --git a/.github/workflows/build-ios15.yml b/.github/workflows/build-ios15.yml
+new file mode 100644
+index 0000000..960cd5a
+--- /dev/null
++++ b/.github/workflows/build-ios15.yml
+@@ -0,0 +1,57 @@
++name: Build HeadunitPad for iPadOS 15
++
++on:
++  workflow_dispatch:
++
++permissions:
++  contents: read
++
++jobs:
++  build:
++    runs-on: macos-15
++    steps:
++      - name: Check out the iPadOS 15 branch
++        uses: actions/checkout@v4
++
++      - name: Apply the iPadOS 15 compatibility patch
++        run: |
++          cp HeadunitPad-ios15.patch "$RUNNER_TEMP/HeadunitPad-ios15.patch"
++          git checkout --detach 57f338f1a38753787d5e2dc762d9e46aabe6f0b3
++          git apply "$RUNNER_TEMP/HeadunitPad-ios15.patch"
++
++      - name: Select Xcode
++        uses: maxim-lobanov/setup-xcode@v1
++        with:
++          xcode-version: 16.4
++
++      - name: Install CocoaPods
++        run: |
++          sudo gem install cocoapods
++          pod install
++
++      - name: Build unsigned app
++        run: |
++          xcodebuild \
++            -workspace HeadunitPad.xcworkspace \
++            -scheme HeadunitPad \
++            -configuration Release \
++            -sdk iphoneos \
++            -destination 'generic/platform=iOS' \
++            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
++            CODE_SIGNING_ALLOWED=NO
++
++      - name: Package IPA
++        run: |
++          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/HeadunitPad.app"
++          test -d "$APP"
++          mkdir -p "$RUNNER_TEMP/ipa/Payload"
++          cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/HeadunitPad.app"
++          cd "$RUNNER_TEMP/ipa"
++          /usr/bin/zip -qry HeadunitPad-iPadOS15-unsigned.ipa Payload
++
++      - name: Upload IPA
++        uses: actions/upload-artifact@v4
++        with:
++          name: HeadunitPad-iPadOS15-unsigned
++          path: ${{ runner.temp }}/ipa/HeadunitPad-iPadOS15-unsigned.ipa
++          if-no-files-found: error
+diff --git a/HeadunitPad.xcodeproj/project.pbxproj b/HeadunitPad.xcodeproj/project.pbxproj
+index a78a8e5..8be8868 100644
+--- a/HeadunitPad.xcodeproj/project.pbxproj
++++ b/HeadunitPad.xcodeproj/project.pbxproj
+@@ -225,7 +225,7 @@
+ 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+ 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+ 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
++				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -261,7 +261,7 @@
+ 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+ 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+ 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
++				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+diff --git a/HeadunitPad/Core/Audio/NowPlayingCoordinator.swift b/HeadunitPad/Core/Audio/NowPlayingCoordinator.swift
+index 45af7a7..79ba55c 100644
+--- a/HeadunitPad/Core/Audio/NowPlayingCoordinator.swift
++++ b/HeadunitPad/Core/Audio/NowPlayingCoordinator.swift
+@@ -13,7 +13,13 @@ final class NowPlayingCoordinator {
+     private var keepAlivePlayer: AVQueuePlayer?
+     private var keepAliveItem: AVPlayerItem?
+     private var keepAliveLooper: AVPlayerLooper?
+-    private var nowPlayingSession: MPNowPlayingSession?
++    private var nowPlayingSessionStorage: AnyObject?
++
++    @available(iOS 16.0, *)
++    private var nowPlayingSession: MPNowPlayingSession? {
++        get { nowPlayingSessionStorage as? MPNowPlayingSession }
++        set { nowPlayingSessionStorage = newValue }
++    }
+     private var configuredCommandCenter: MPRemoteCommandCenter?
+     private var lastPublishedIsPlaying: Bool?
+     private var hasConfiguredAudioSession = false
+@@ -21,11 +27,17 @@ final class NowPlayingCoordinator {
+     private init() {}
+ 
+     private var activeInfoCenter: MPNowPlayingInfoCenter {
+-        nowPlayingSession?.nowPlayingInfoCenter ?? MPNowPlayingInfoCenter.default()
++        if #available(iOS 16.0, *), let nowPlayingSession {
++            return nowPlayingSession.nowPlayingInfoCenter
++        }
++        return MPNowPlayingInfoCenter.default()
+     }
+ 
+     private var activeCommandCenter: MPRemoteCommandCenter {
+-        nowPlayingSession?.remoteCommandCenter ?? MPRemoteCommandCenter.shared()
++        if #available(iOS 16.0, *), let nowPlayingSession {
++            return nowPlayingSession.remoteCommandCenter
++        }
++        return MPRemoteCommandCenter.shared()
+     }
+ 
+     func activate() {
+@@ -58,7 +70,7 @@ final class NowPlayingCoordinator {
+             self.clearRemoteCommands()
+             self.activeInfoCenter.nowPlayingInfo = nil
+             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+-            self.nowPlayingSession = nil
++            self.nowPlayingSessionStorage = nil
+             UIApplication.shared.endReceivingRemoteControlEvents()
+             print("NowPlayingCoordinator: deactivated")
+         }
+@@ -102,14 +114,17 @@ final class NowPlayingCoordinator {
+             player.volume = 0.0001
+             keepAliveItem = item
+             keepAlivePlayer = player
+-            item.nowPlayingInfo = makeNowPlayingInfo(metadata: metadata, playbackState: playbackState)
+             keepAliveLooper = AVPlayerLooper(player: player, templateItem: item)
+-            configureNowPlayingSession(for: player)
++            if #available(iOS 16.0, *) {
++                item.nowPlayingInfo = makeNowPlayingInfo(metadata: metadata, playbackState: playbackState)
++                configureNowPlayingSession(for: player)
++            }
+         }
+ 
+         player.playImmediately(atRate: 1.0)
+     }
+ 
++    @available(iOS 16.0, *)
+     private func configureNowPlayingSession(for player: AVPlayer) {
+         let session = MPNowPlayingSession(players: [player])
+         session.automaticallyPublishesNowPlayingInfo = false
+@@ -134,14 +149,14 @@ final class NowPlayingCoordinator {
+     }
+ 
+     private func tearDownSilentPlayback() {
+-        nowPlayingSession?.nowPlayingInfoCenter.nowPlayingInfo = nil
++        activeInfoCenter.nowPlayingInfo = nil
+         keepAlivePlayer?.pause()
+         keepAlivePlayer?.removeAllItems()
+         keepAliveLooper?.disableLooping()
+         keepAliveLooper = nil
+         keepAlivePlayer = nil
+         keepAliveItem = nil
+-        nowPlayingSession = nil
++        nowPlayingSessionStorage = nil
+     }
+ 
+     private func pauseSilentPlayback() {
+@@ -314,8 +329,10 @@ final class NowPlayingCoordinator {
+         if forceRepublish || lastPublishedIsPlaying != playbackState.isPlaying {
+             activeInfoCenter.nowPlayingInfo = nil
+         }
+-        keepAliveItem?.nowPlayingInfo = info
+-        keepAlivePlayer?.currentItem?.nowPlayingInfo = info
++        if #available(iOS 16.0, *) {
++            keepAliveItem?.nowPlayingInfo = info
++            keepAlivePlayer?.currentItem?.nowPlayingInfo = info
++        }
+         activeInfoCenter.nowPlayingInfo = info
+         lastPublishedIsPlaying = playbackState.isPlaying
+     }
+diff --git a/HeadunitPad/MainViewController.swift b/HeadunitPad/MainViewController.swift
+index 58b6943..fe6ab7d 100644
+--- a/HeadunitPad/MainViewController.swift
++++ b/HeadunitPad/MainViewController.swift
+@@ -170,11 +170,11 @@ class MainViewController: UIViewController {
+     }
+ 
+     private func applyOrientationLock() {
+-        setNeedsUpdateOfSupportedInterfaceOrientations()
+         touchOverlayView.isMultipleTouchEnabled = true
+ 
+         let targetMask = supportedInterfaceOrientations
+         if #available(iOS 16.0, *) {
++            setNeedsUpdateOfSupportedInterfaceOrientations()
+             guard let scene = view.window?.windowScene else { return }
+             let prefs = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: targetMask)
+             scene.requestGeometryUpdate(prefs) { error in
+diff --git a/Podfile b/Podfile
+index 89a0360..f3597e1 100644
+--- a/Podfile
++++ b/Podfile
+@@ -1,4 +1,4 @@
+-platform :ios, '16.6'
++platform :ios, '15.0'
+ use_frameworks! :linkage => :static
+ 
+ target 'HeadunitPad' do
