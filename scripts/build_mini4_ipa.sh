@@ -25,7 +25,7 @@ APP="$DERIVED_DATA/Build/Products/Release-iphoneos/HeadunitPad.app"
 BINARY="$APP/HeadunitPad"
 test -f "$BINARY"
 test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")" = '15.0'
-lipo -verify_arch arm64 "$BINARY"
+lipo "$BINARY" -verify_arch arm64
 if otool -L "$BINARY" | grep -qiE 'USBHostKit|libusb'; then
   echo 'Wireless app unexpectedly links a USB host library.' >&2
   exit 1
