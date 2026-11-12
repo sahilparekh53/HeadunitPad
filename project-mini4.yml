@@ -20,8 +20,13 @@ targets:
       - path: HeadunitPad
         excludes:
           - Core/USB
+          - Resources/Raw
           - Info.plist
           - HeadunitPad.entitlements
+      - path: HeadunitPad/Resources/Raw/cert
+        buildPhase: resources
+      - path: HeadunitPad/Resources/Raw/privkey
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: local.headunitpad.mini4
