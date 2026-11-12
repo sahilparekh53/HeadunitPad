@@ -1,3 +1,25 @@
+# Local iPad mini 4 adaptation — 2026-11-13
+
+The user requests HeadunitPad for iPad mini 4, iPadOS 15.8.5, Galaxy S24,
+and a Windows-only development setup. This local task takes precedence over
+upstream wired-product phases below. One active task: prepare an iPadOS 15
+wireless build and a macOS-hosted build/test/package workflow.
+
+Acceptance: separate wireless target excludes USBHostKit and private USB
+entitlements; supports landscape video, audio, touch, microphone, phone GPS,
+and reconnect; builds with minimum iPadOS 15.0 and packages an unsigned IPA
+for ordinary sideloading. Preserve upstream wired target. Actual Xcode builds
+and mini 4/S24 testing must be recorded before claiming compatibility.
+No automatic jailbreak, TrollStore install, or system changes are authorized.
+
+Verification sequence:
+1. Inspect guarded sources and generated-project configuration locally.
+2. Run macOS simulator tests and a generic arm64 device build on a hosted Mac.
+3. Verify packaged minimum OS, resources, architecture, and lack of USB linkage.
+4. Sideload from Windows and test on the physical iPad and phone.
+
+---
+
 # HeadunitPad Wired Android Auto Product Requirements Document
 
 ## 1. Product goal

@@ -1,0 +1,61 @@
+name: Build iPad mini 4
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mini4-wireless]
+  pull_request:
+    paths:
+      - 'HeadunitPad/**'
+      - 'HeadunitPadTests/**'
+      - 'mini4/**'
+      - 'project-mini4.yml'
+      - 'scripts/*mini4*'
+      - '.github/workflows/build-mini4.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26 or newer
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Prepare iPadOS 15 wireless project
+        run: |
+          xcodegen generate --spec project-mini4.yml
+          pod install --project-directory=mini4
+      - name: Fetch installed simulator skill for hosted testing
+        uses: actions/checkout@v4
+        with:
+          repository: conorluddy/ios-simulator-skill
+          ref: 86fb9ba90a438bd2ee7ab640165bd77da396d941
+          path: .build/ios-simulator-skill
+          persist-credentials: false
+      - name: Test parser and TCP transport using simulator skill
+        run: |
+          python3 .build/ios-simulator-skill/ios-simulator-skill/skills/ios-simulator-skill/scripts/build_and_test.py \
+            --workspace mini4/HeadunitPadMini4.xcworkspace \
+            --scheme HeadunitPadMini4 --test --no-parallel --verbose
+      - name: Build and verify unsigned iPad IPA
+        run: bash scripts/build_mini4_ipa.sh "$RUNNER_TEMP/mini4-ipa"
+      - name: Upload IPA for Windows sideloading
+        uses: actions/upload-artifact@v4
+        with:
+          name: HeadunitPad-Mini4-iPadOS15-unsigned
+          path: ${{ runner.temp }}/mini4-ipa/HeadunitPad-Mini4-unsigned.ipa
+          if-no-files-found: error
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mini4-test-results
+          path: '**/*.xcresult'
+          if-no-files-found: ignore

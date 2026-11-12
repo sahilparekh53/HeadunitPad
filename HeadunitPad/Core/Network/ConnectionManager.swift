@@ -42,6 +42,7 @@ enum ConnectionState: Equatable {
     }
 }
 
+#if !HEADUNIT_WIRELESS_ONLY
 enum USBProbeState: Equatable {
     case idle
     case running(String)
@@ -55,13 +56,16 @@ enum USBProbeState: Equatable {
     }
 }
 
+#endif
 protocol ConnectionManagerDelegate: AnyObject {
     func connectionManager(_ manager: ConnectionManager, didChangeState state: ConnectionState)
     func connectionManager(_ manager: ConnectionManager, didUpdateStatus status: String)
     func connectionManager(_ manager: ConnectionManager, didDiscoverDevice device: DiscoveredDevice)
     func connectionManager(_ manager: ConnectionManager, didReceiveVideoData data: Data)
     func connectionManager(_ manager: ConnectionManager, didReceiveAudioData data: Data, on channel: UInt8)
+#if !HEADUNIT_WIRELESS_ONLY
     func connectionManager(_ manager: ConnectionManager, didChangeUSBProbeState state: USBProbeState)
+#endif
 }
 
 class ConnectionManager {
@@ -74,13 +78,16 @@ class ConnectionManager {
     private let locationCapture = LocationCapture()
     private var aapTransport: AapTransport?
     private var activeConnection: ByteStreamConnection?
+#if !HEADUNIT_WIRELESS_ONLY
     private var usbAccessoryConnection: USBAccessoryConnection?
     private var usbHost: (any AOAUSBHosting)?
+#endif
     private var reconnectWorkItem: DispatchWorkItem?
     private var isUserInitiatedDisconnect = false
     private var hasTriggeredWirelessHelper = false
     private var hasReceivedAaMediaMetadata = false
     private let reconnectDelay: TimeInterval = 2.0
+#if !HEADUNIT_WIRELESS_ONLY
     private var usbProbeTask: Task<Void, Never>?
     private var usbCleanupTask: Task<Void, Never>?
     private(set) var usbProbeState: USBProbeState = .idle {
@@ -92,6 +99,7 @@ class ConnectionManager {
         }
     }
     private(set) var usbProbeDiagnostics = AOAProbeDiagnostics()
+#endif
     /// Survives the probe reset in startUSBProbe: a failed reconnect is usually
     /// explained by how the session before it ended.
     private var lastSessionTeardownLines: [String] = []
@@ -131,6 +139,7 @@ class ConnectionManager {
         locationCapture.requestPermissionIfNeeded()
     }
 
+#if !HEADUNIT_WIRELESS_ONLY
     func startUSBProbe() {
         guard usbProbeTask == nil, usbCleanupTask == nil else { return }
         switch state {
@@ -204,12 +213,15 @@ class ConnectionManager {
         usbProbeTask.cancel()
     }
 
+#endif
     func startDiscovery() {
         print("ConnectionManager: startDiscovery called")
+#if !HEADUNIT_WIRELESS_ONLY
         guard usbProbeTask == nil else {
             print("ConnectionManager: Cannot start wireless discovery while a wired connection is in progress")
             return
         }
+#endif
         reconnectWorkItem?.cancel()
         reconnectWorkItem = nil
         isUserInitiatedDisconnect = false
@@ -289,15 +301,20 @@ class ConnectionManager {
 
     func disconnect() {
         print("ConnectionManager: disconnect called")
+#if !HEADUNIT_WIRELESS_ONLY
         guard usbCleanupTask == nil else { return }
+#endif
         isUserInitiatedDisconnect = true
         reconnectWorkItem?.cancel()
         reconnectWorkItem = nil
+#if !HEADUNIT_WIRELESS_ONLY
         stopUSBProbe()
+#endif
         NowPlayingCoordinator.shared.deactivate()
         microphoneCapture.stop()
         locationCapture.stop()
         wirelessHelperServer.stop()
+#if !HEADUNIT_WIRELESS_ONLY
         if usbAccessoryConnection != nil, let transport = aapTransport {
             usbProbeState = .running("Releasing wired USB resources...")
             state = .disconnecting
@@ -308,6 +325,7 @@ class ConnectionManager {
             }
             return
         }
+#endif
         activeConnection?.disconnect()
         connectedDevice = nil
         state = .disconnected
@@ -361,6 +379,9 @@ class ConnectionManager {
 
     func diagnosticLines() -> [String] {
         let device = connectedDevice
+#if HEADUNIT_WIRELESS_ONLY
+        let liveVideoLines = aapTransport?.videoDiagnosticLines() ?? []
+#else
         let liveVideoLines = usbProbeDiagnostics.aapVideoDiagnostics.isEmpty
             ? (aapTransport?.videoDiagnosticLines() ?? [])
             : []
@@ -373,6 +394,7 @@ class ConnectionManager {
         case .unknown(let reason):
             entitlements = "Unknown (\(reason))"
         }
+#endif
         let connectionLines = [
             "State: \(state.description)",
             "Status: \(statusDetail)",
@@ -388,9 +410,12 @@ class ConnectionManager {
             "Helper triggered: \(hasTriggeredWirelessHelper ? "Yes" : "No")",
             "Connected device: \(device?.displayName ?? "None")",
             "Connected endpoint: \(device.map { "\($0.ip):\($0.port)" } ?? "None")",
-            "USB host entitlements: \(entitlements)",
             "",
         ]
+#if HEADUNIT_WIRELESS_ONLY
+        return connectionLines + liveVideoLines + lastSessionTeardownLines
+#else
+        let entitlementLines = ["USB host entitlements: \(entitlements)"]
         var usbLines = usbProbeDiagnostics
         if let usbAccessoryConnection {
             usbLines.recordStaleDrain(
@@ -398,13 +423,15 @@ class ConnectionManager {
                 ranOutOfBudget: usbAccessoryConnection.staleDrainRanOutOfBudget
             )
         }
-        return connectionLines
+        return connectionLines + entitlementLines
             + liveVideoLines
             + [""]
             + usbLines.lines
             + (lastSessionTeardownLines.isEmpty ? [] : [""] + lastSessionTeardownLines)
+#endif
     }
 
+#if !HEADUNIT_WIRELESS_ONLY
     private func handleUSBProbeStage(_ stage: AOAModeSwitchStage) {
         usbProbeDiagnostics.record(stage)
         if case .libusbLog = stage {
@@ -413,16 +440,22 @@ class ConnectionManager {
         usbProbeState = .running(usbProbeDiagnostics.status)
     }
 
+#endif
     private func installAapTransport(connection: ByteStreamConnection) {
         activeConnection = connection
+#if HEADUNIT_WIRELESS_ONLY
+        let transport = AapTransport(connection: connection, handshakeProfile: .network)
+#else
         let transport = AapTransport(
             connection: connection,
             handshakeProfile: connection is USBAccessoryConnection ? .wired : .network
         )
+#endif
         transport.delegate = self
         aapTransport = transport
     }
 
+#if !HEADUNIT_WIRELESS_ONLY
     private func cleanupUSBResources() async {
         let host = usbHost
         usbHost = nil
@@ -431,6 +464,7 @@ class ConnectionManager {
         await host?.stop()
     }
 
+#endif
     private func updateStatus(_ status: String) {
         statusDetail = status
         print("ConnectionManager: status = \(status)")
@@ -621,6 +655,9 @@ extension ConnectionManager: AapTransportDelegate {
         case .running:
             NowPlayingCoordinator.shared.activate()
             self.state = .running
+#if HEADUNIT_WIRELESS_ONLY
+            updateStatus("Android Auto is running over wireless")
+#else
             if usbAccessoryConnection != nil {
                 usbProbeDiagnostics.recordAAPRunning()
                 usbProbeState = .succeeded
@@ -628,12 +665,16 @@ extension ConnectionManager: AapTransportDelegate {
             } else {
                 updateStatus("Android Auto is running over wireless")
             }
+#endif
         case .error(let msg):
             NowPlayingCoordinator.shared.deactivate()
             microphoneCapture.stop()
             locationCapture.stop()
             self.state = .error(msg)
             updateStatus(msg)
+#if HEADUNIT_WIRELESS_ONLY
+            scheduleReconnectIfNeeded(reason: "Android Auto error")
+#else
             if let usbAccessoryConnection {
                 usbProbeDiagnostics.record(error: NSError(
                     domain: "HeadunitPad.USB",
@@ -645,6 +686,8 @@ extension ConnectionManager: AapTransportDelegate {
             } else {
                 scheduleReconnectIfNeeded(reason: "Android Auto error")
             }
+#endif
+#if !HEADUNIT_WIRELESS_ONLY
         case .waitingForVersion, .versionSent:
             updateUSBHandshakeStatus("Negotiating Android Auto version over USB")
         case .tlsHandshaking:
@@ -653,6 +696,7 @@ extension ConnectionManager: AapTransportDelegate {
             updateUSBHandshakeStatus("Authenticating Android Auto over USB")
         case .binding:
             updateUSBHandshakeStatus("Binding Android Auto services over USB")
+#endif
         default:
             break
         }
@@ -660,10 +704,13 @@ extension ConnectionManager: AapTransportDelegate {
 
     func aapTransportDidDisconnect(_ transport: AapTransport) {
         guard transport === aapTransport else { return }
+#if !HEADUNIT_WIRELESS_ONLY
         let wasUSB = usbAccessoryConnection != nil
+#endif
         if transport.didReachRunning {
             lastSessionTeardownLines = transport.teardownDiagnosticLines()
         }
+#if !HEADUNIT_WIRELESS_ONLY
         if let usbAccessoryConnection {
             usbProbeDiagnostics.recordAAPVideoDiagnostics(transport.videoDiagnosticLines())
             usbProbeDiagnostics.recordStaleDrain(
@@ -671,10 +718,12 @@ extension ConnectionManager: AapTransportDelegate {
                 ranOutOfBudget: usbAccessoryConnection.staleDrainRanOutOfBudget
             )
         }
+#endif
         aapTransport = nil
         NowPlayingCoordinator.shared.deactivate()
         microphoneCapture.stop()
         locationCapture.stop()
+#if !HEADUNIT_WIRELESS_ONLY
         if wasUSB {
             usbAccessoryConnection?.disconnect()
             let finalProbeState: USBProbeState
@@ -728,12 +777,14 @@ extension ConnectionManager: AapTransportDelegate {
             usbCleanupTask = cleanupTask
             return
         }
+#endif
         connectedDevice = nil
         state = .disconnected
         updateStatus("Android Auto disconnected")
         scheduleReconnectIfNeeded(reason: "Android Auto disconnected")
     }
 
+#if !HEADUNIT_WIRELESS_ONLY
     private func updateUSBHandshakeStatus(_ status: String) {
         guard usbAccessoryConnection != nil else { return }
         usbProbeDiagnostics.recordAAPHandshaking(status)
@@ -741,6 +792,7 @@ extension ConnectionManager: AapTransportDelegate {
         state = .handshaking
         updateStatus(status)
     }
+#endif
 }
 
 extension ConnectionManager: WirelessHelperServerDelegate {

@@ -13,7 +13,13 @@ final class NowPlayingCoordinator {
     private var keepAlivePlayer: AVQueuePlayer?
     private var keepAliveItem: AVPlayerItem?
     private var keepAliveLooper: AVPlayerLooper?
-    private var nowPlayingSession: MPNowPlayingSession?
+    private var nowPlayingSessionStorage: AnyObject?
+
+    @available(iOS 16.0, *)
+    private var nowPlayingSession: MPNowPlayingSession? {
+        get { nowPlayingSessionStorage as? MPNowPlayingSession }
+        set { nowPlayingSessionStorage = newValue }
+    }
     private var configuredCommandCenter: MPRemoteCommandCenter?
     private var lastPublishedIsPlaying: Bool?
     private var hasConfiguredAudioSession = false
@@ -21,11 +27,17 @@ final class NowPlayingCoordinator {
     private init() {}
 
     private var activeInfoCenter: MPNowPlayingInfoCenter {
-        nowPlayingSession?.nowPlayingInfoCenter ?? MPNowPlayingInfoCenter.default()
+        if #available(iOS 16.0, *), let nowPlayingSession {
+            return nowPlayingSession.nowPlayingInfoCenter
+        }
+        return MPNowPlayingInfoCenter.default()
     }
 
     private var activeCommandCenter: MPRemoteCommandCenter {
-        nowPlayingSession?.remoteCommandCenter ?? MPRemoteCommandCenter.shared()
+        if #available(iOS 16.0, *), let nowPlayingSession {
+            return nowPlayingSession.remoteCommandCenter
+        }
+        return MPRemoteCommandCenter.shared()
     }
 
     func activate() {
@@ -58,7 +70,7 @@ final class NowPlayingCoordinator {
             self.clearRemoteCommands()
             self.activeInfoCenter.nowPlayingInfo = nil
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-            self.nowPlayingSession = nil
+            self.nowPlayingSessionStorage = nil
             UIApplication.shared.endReceivingRemoteControlEvents()
             print("NowPlayingCoordinator: deactivated")
         }
@@ -102,14 +114,17 @@ final class NowPlayingCoordinator {
             player.volume = 0.0001
             keepAliveItem = item
             keepAlivePlayer = player
-            item.nowPlayingInfo = makeNowPlayingInfo(metadata: metadata, playbackState: playbackState)
             keepAliveLooper = AVPlayerLooper(player: player, templateItem: item)
-            configureNowPlayingSession(for: player)
+            if #available(iOS 16.0, *) {
+                item.nowPlayingInfo = makeNowPlayingInfo(metadata: metadata, playbackState: playbackState)
+                configureNowPlayingSession(for: player)
+            }
         }
 
         player.playImmediately(atRate: 1.0)
     }
 
+    @available(iOS 16.0, *)
     private func configureNowPlayingSession(for player: AVPlayer) {
         let session = MPNowPlayingSession(players: [player])
         session.automaticallyPublishesNowPlayingInfo = false
@@ -134,14 +149,14 @@ final class NowPlayingCoordinator {
     }
 
     private func tearDownSilentPlayback() {
-        nowPlayingSession?.nowPlayingInfoCenter.nowPlayingInfo = nil
+        activeInfoCenter.nowPlayingInfo = nil
         keepAlivePlayer?.pause()
         keepAlivePlayer?.removeAllItems()
         keepAliveLooper?.disableLooping()
         keepAliveLooper = nil
         keepAlivePlayer = nil
         keepAliveItem = nil
-        nowPlayingSession = nil
+        nowPlayingSessionStorage = nil
     }
 
     private func pauseSilentPlayback() {
@@ -314,8 +329,10 @@ final class NowPlayingCoordinator {
         if forceRepublish || lastPublishedIsPlaying != playbackState.isPlaying {
             activeInfoCenter.nowPlayingInfo = nil
         }
-        keepAliveItem?.nowPlayingInfo = info
-        keepAlivePlayer?.currentItem?.nowPlayingInfo = info
+        if #available(iOS 16.0, *) {
+            keepAliveItem?.nowPlayingInfo = info
+            keepAlivePlayer?.currentItem?.nowPlayingInfo = info
+        }
         activeInfoCenter.nowPlayingInfo = info
         lastPublishedIsPlaying = playbackState.isPlaying
     }

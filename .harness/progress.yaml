@@ -2,16 +2,16 @@ schema_version: 1
 project: HeadunitPad Wired Android Auto
 
 current_phase:
-  id: phase_4
-  name: Product integration and acceptance
-  status: not_started
-
-current_task:
-  id: phase_4_task_1
-  name: Wired USB and USB-first Auto connection modes, status text, and diagnostics
+  id: mini4_compatibility
+  name: iPadOS 15 wireless adaptation
   status: in_progress
 
-current_task_progress:
+current_task:
+  id: mini4_wireless_build
+  name: Build and verify wireless HeadunitPad for iPad mini 4
+  status: in_progress
+
+upstream_phase_4_progress:
   completed:
     - Labelled both home-screen paths as Wired or Wireless with matching icons, so the wired entry point is no longer indistinguishable from the wireless one.
     - Widened the connection controls to 300 points after the added labels wrapped every button onto two lines in the simulator.
@@ -322,3 +322,48 @@ next_task: >-
   Phase 4 task 2: verify wired video, audio, touch, microphone, and location on
   hardware, then start the stability gate of ten unplug/replug cycles,
   background/foreground recovery, and thirty minutes of continuous playback.
+
+ipad_mini_4_assessment:
+  date: '2026-11-13'
+  phase: Compatibility assessment
+  status: in_progress
+  requested_goal: Adapt HeadunitPad for the user's iPad mini 4.
+  completed:
+    - Cloned upstream source into the local workspace.
+    - Confirmed app deployment targets and Podfile currently require iOS 16.6.
+    - Identified an unguarded iOS 16 orientation API in MainViewController.applyOrientationLock.
+    - Identified TrollUSBHostKit as an additional dependency compatibility gate.
+    - Inspected the existing macOS-hosted IPA build workflow.
+  verification:
+    - Source inspection only; no app code changed or builds run.
+    - Current Windows environment cannot run Xcode or the iOS Simulator.
+  remaining:
+    - Confirm exact iPadOS version, Android phone, and access to a Mac.
+    - Adapt and build for iPadOS 15; validate dependencies and device installation.
+    - Test wireless video, audio, touch, microphone, and reconnect on physical hardware.
+    - Wired Lightning support remains unassessed and is not promised.
+  next_task: Establish an iPadOS 15 wireless build after device details are confirmed.
+  upstream_tracking: Existing phase_4 records describe upstream work and are not evidence of mini 4 compatibility.
+
+mini4_implementation:
+  device: iPad mini 4, iPadOS 15.8.5
+  phone: Galaxy S24
+  development_host: Windows
+  completed:
+    - Prepared independent XcodeGen project and CocoaPods workspace for iPadOS 15 wireless operation.
+    - Excluded USBHostKit, USB UI, and private USB entitlements from the wireless target.
+    - Guarded iOS 16 orientation and now-playing APIs, reusing the fork's media-control fix.
+    - Prepared hosted Mac build, simulator tests through the installed simulator skill, and unsigned IPA packaging.
+    - Added package verification for minimum OS, device family, required resources, privacy declarations and frameworks.
+    - Added Windows installation, S24 connection and physical acceptance instructions in MINI4-SETUP.md.
+  verification:
+    - Swift syntax and conditional-source checks passed for both wireless and upstream variants.
+    - Project and workflow YAML parsed successfully.
+    - Package verification accepted a valid fixture and rejected newer OS, missing identity and newer framework fixtures.
+    - Actual Xcode compilation and simulator tests pending hosted build.
+    - Physical iPad and S24 tests not performed.
+  remaining:
+    - Run hosted Mac build and resolve any compiler or dependency failures.
+    - Install signed IPA from Windows and complete physical acceptance checklist.
+  next_task: Push mini4-wireless branch to the user's existing fork and verify the hosted build.
+  upstream_note: Historical wired validation above is not mini 4 test evidence.

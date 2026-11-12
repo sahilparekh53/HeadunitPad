@@ -61,3 +61,8 @@ Thumbs.db
 *.p12
 *.cer
 *.key
+
+# Generated iPad mini 4 project
+HeadunitPadMini4.xcodeproj/
+mini4/HeadunitPadMini4.xcworkspace/
+__pycache__/

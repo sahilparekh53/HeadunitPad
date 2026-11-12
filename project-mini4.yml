@@ -1,0 +1,60 @@
+name: HeadunitPadMini4
+options:
+  minimumXcodeGenVersion: "2.44.0"
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) HEADUNIT_WIRELESS_ONLY"
+    TARGETED_DEVICE_FAMILY: "2"
+    SUPPORTS_MACCATALYST: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  HeadunitPad:
+    type: application
+    platform: iOS
+    sources:
+      - path: HeadunitPad
+        excludes:
+          - Core/USB
+          - Info.plist
+          - HeadunitPad.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.headunitpad.mini4
+        PRODUCT_NAME: HeadunitPad
+        INFOPLIST_FILE: HeadunitPad/Info.plist
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: HeadunitPad
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "0.4.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_ENTITLEMENTS: ""
+  HeadunitPadMini4Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - HeadunitPadTests/H264NALParserTests.swift
+      - HeadunitPadTests/ByteStreamConnectionTests.swift
+      - HeadunitPad/Core/Video/H264NALParser.swift
+      - HeadunitPad/Core/Network/ByteStreamConnection.swift
+      - HeadunitPad/Core/Network/TcpHandler.swift
+      - HeadunitPad/Core/AAP/AapMessage.swift
+      - HeadunitPad/Core/AAP/Protocol/Channel.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.headunitpad.mini4.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+schemes:
+  HeadunitPadMini4:
+    build:
+      targets:
+        HeadunitPad: all
+        HeadunitPadMini4Tests: [test]
+    test:
+      targets:
+        - HeadunitPadMini4Tests

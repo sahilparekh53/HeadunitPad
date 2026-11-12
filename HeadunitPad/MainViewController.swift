@@ -119,6 +119,7 @@ class MainViewController: UIViewController {
         return button
     }()
 
+#if !HEADUNIT_WIRELESS_ONLY
     private lazy var usbProbeButton: UIButton = {
         var config = UIButton.Configuration.tinted()
         config.title = Self.wiredConnectTitle
@@ -132,6 +133,7 @@ class MainViewController: UIViewController {
         return button
     }()
 
+#endif
     private lazy var disconnectButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Disconnect"
@@ -194,11 +196,11 @@ class MainViewController: UIViewController {
     }
 
     private func applyOrientationLock() {
-        setNeedsUpdateOfSupportedInterfaceOrientations()
         touchOverlayView.isMultipleTouchEnabled = true
 
         let targetMask = supportedInterfaceOrientations
         if #available(iOS 16.0, *) {
+            setNeedsUpdateOfSupportedInterfaceOrientations()
             guard let scene = view.window?.windowScene else { return }
             let prefs = UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: targetMask)
             scene.requestGeometryUpdate(prefs) { error in
@@ -241,7 +243,9 @@ class MainViewController: UIViewController {
         view.addSubview(activityIndicator)
         view.addSubview(settingsButton)
         view.addSubview(manualIPButton)
+#if !HEADUNIT_WIRELESS_ONLY
         view.addSubview(usbProbeButton)
+#endif
         view.addSubview(disconnectButton)
 
         NSLayoutConstraint.activate([
@@ -306,11 +310,6 @@ class MainViewController: UIViewController {
             manualIPButton.topAnchor.constraint(equalTo: connectButton.bottomAnchor, constant: 16),
             manualIPButton.widthAnchor.constraint(equalToConstant: connectControlWidth),
 
-            // Wired USB Probe Button
-            usbProbeButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            usbProbeButton.topAnchor.constraint(equalTo: manualIPButton.bottomAnchor, constant: 12),
-            usbProbeButton.widthAnchor.constraint(equalToConstant: connectControlWidth),
-
             // Disconnect Button
             disconnectButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             disconnectButton.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 48),
@@ -318,12 +317,22 @@ class MainViewController: UIViewController {
 
             // Activity Indicator
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            activityIndicator.topAnchor.constraint(equalTo: usbProbeButton.bottomAnchor, constant: 24),
+
 
             // Settings Button
             settingsButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             settingsButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12)
         ])
+#if HEADUNIT_WIRELESS_ONLY
+        activityIndicator.topAnchor.constraint(equalTo: manualIPButton.bottomAnchor, constant: 24).isActive = true
+#else
+        NSLayoutConstraint.activate([
+            usbProbeButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            usbProbeButton.topAnchor.constraint(equalTo: manualIPButton.bottomAnchor, constant: 12),
+            usbProbeButton.widthAnchor.constraint(equalToConstant: connectControlWidth),
+            activityIndicator.topAnchor.constraint(equalTo: usbProbeButton.bottomAnchor, constant: 24)
+        ])
+#endif
     }
 
     // MARK: - UI Updates
@@ -345,7 +354,9 @@ class MainViewController: UIViewController {
             connectButton.isEnabled = true
             updateConnectButtonTitle()
             manualIPButton.isHidden = false
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = false
+#endif
             disconnectButton.isHidden = true
             activityIndicator.stopAnimating()
 
@@ -360,7 +371,9 @@ class MainViewController: UIViewController {
             statusLabel.textColor = .secondaryLabel
             connectButton.isHidden = true
             manualIPButton.isHidden = true
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = true
+#endif
             disconnectButton.isHidden = true
             activityIndicator.startAnimating()
 
@@ -375,7 +388,9 @@ class MainViewController: UIViewController {
             statusLabel.textColor = .secondaryLabel
             connectButton.isHidden = true
             manualIPButton.isHidden = true
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = true
+#endif
             disconnectButton.isHidden = false
             activityIndicator.startAnimating()
 
@@ -390,7 +405,9 @@ class MainViewController: UIViewController {
             statusLabel.textColor = .secondaryLabel
             connectButton.isHidden = true
             manualIPButton.isHidden = true
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = !connectionManager.usbProbeState.isRunning
+#endif
             disconnectButton.isHidden = true
             activityIndicator.startAnimating()
 
@@ -405,7 +422,9 @@ class MainViewController: UIViewController {
             statusLabel.textColor = .systemBlue
             connectButton.isHidden = true
             manualIPButton.isHidden = true
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = true
+#endif
             disconnectButton.isHidden = false
             activityIndicator.startAnimating()
 
@@ -420,7 +439,9 @@ class MainViewController: UIViewController {
             statusLabel.textColor = .systemGreen
             connectButton.isHidden = true
             manualIPButton.isHidden = true
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = true
+#endif
             disconnectButton.isHidden = true
             activityIndicator.stopAnimating()
 
@@ -436,7 +457,9 @@ class MainViewController: UIViewController {
             statusLabel.textColor = .secondaryLabel
             connectButton.isHidden = true
             manualIPButton.isHidden = true
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = true
+#endif
             disconnectButton.isHidden = true
             activityIndicator.startAnimating()
 
@@ -454,7 +477,9 @@ class MainViewController: UIViewController {
             connectButton.isEnabled = true
             updateConnectButtonTitle()
             manualIPButton.isHidden = false
+#if !HEADUNIT_WIRELESS_ONLY
             usbProbeButton.isHidden = false
+#endif
             disconnectButton.isHidden = true
             activityIndicator.stopAnimating()
         }
@@ -547,6 +572,7 @@ class MainViewController: UIViewController {
         present(alert, animated: true)
     }
 
+#if !HEADUNIT_WIRELESS_ONLY
     @objc private func usbProbeButtonTapped() {
         if connectionManager.usbProbeState.isRunning {
             connectionManager.stopUSBProbe()
@@ -575,6 +601,7 @@ class MainViewController: UIViewController {
         present(alert, animated: true)
     }
 
+#endif
     @objc private func disconnectButtonTapped() {
         connectionManager.disconnect()
     }
@@ -835,6 +862,7 @@ class MainViewController: UIViewController {
         present(alert, animated: true)
     }
 
+#if !HEADUNIT_WIRELESS_ONLY
     private func updateUSBProbeUI(_ state: USBProbeState) {
         switch state {
         case .idle:
@@ -877,6 +905,7 @@ class MainViewController: UIViewController {
         present(alert, animated: true)
     }
 
+#endif
     private func combinedDiagnosticLines() -> [String] {
         connectionManager.diagnosticLines()
             + [""]
@@ -990,7 +1019,9 @@ extension MainViewController: ConnectionManagerDelegate {
         audioPlayer.playPCM(data, on: channel)
     }
 
+#if !HEADUNIT_WIRELESS_ONLY
     func connectionManager(_ manager: ConnectionManager, didChangeUSBProbeState state: USBProbeState) {
         updateUSBProbeUI(state)
     }
+#endif
 }
