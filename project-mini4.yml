@@ -30,6 +30,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: local.headunitpad.mini4
+        TARGETED_DEVICE_FAMILY: "2"
         PRODUCT_NAME: HeadunitPad
         INFOPLIST_FILE: HeadunitPad/Info.plist
         GENERATE_INFOPLIST_FILE: YES
@@ -52,6 +53,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: local.headunitpad.mini4.tests
+        TARGETED_DEVICE_FAMILY: "2"
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
 schemes:
@@ -63,3 +65,4 @@ schemes:
     test:
       targets:
         - HeadunitPadMini4Tests
+
