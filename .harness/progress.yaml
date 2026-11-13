@@ -8,8 +8,8 @@ current_phase:
 
 current_task:
   id: mini4_wireless_build
-  name: Build and verify wireless HeadunitPad for iPad mini 4
-  status: in_progress
+  name: Prepare and validate iPadOS 15 wireless IPA
+  status: completed
 
 upstream_phase_4_progress:
   completed:
@@ -367,3 +367,57 @@ mini4_implementation:
     - Install signed IPA from Windows and complete physical acceptance checklist.
   next_task: Push mini4-wireless branch to the user's existing fork and verify the hosted build.
   upstream_note: Historical wired validation above is not mini 4 test evidence.
+
+mini4_build_evidence:
+  branch: mini4-wireless
+  repository: sahilparekh53/HeadunitPad
+  latest_code_commit: ba6cdf9d517aa75d7bd02f347198aa0fa532ea3d
+  baseline_run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43225118875
+  baseline_result:
+    - Seven simulator tests passed; zero failures.
+    - Generic arm64 iPadOS 15 device build succeeded on Xcode 26.6.
+    - Packaging stopped at incorrect lipo argument ordering; corrected in source.
+  final_run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43226733148
+  final_run_status: queued_for_macos_runner
+  launch_check: Pending; simulator skill test and launch commands must be separate.
+  windows_setup:
+    - AltServer, iTunes, and Apple Mobile Device Support are installed.
+    - Started AltServer for the user.
+    - User confirmed AltStore is not installed on the iPad.
+    - Provided connection, Trust Computer, AltStore installation and profile trust instructions.
+  next_task: Complete hosted build, inspect packaged IPA and launch screenshot, then install via AltStore.
+  physical_validation: Not performed; requires the user's iPad and S24.
+
+mini4_latest_validation:
+  successful_checks:
+    - All seven simulator tests passed on macOS 15 with Xcode 26.3.
+    - App installed and launched on an iPad simulator; launch screenshot inspected.
+    - Generic arm64 iPadOS 15 build succeeded.
+  packaging_issue: Generated target defaults included iPhone; strict iPad-only check rejected the package.
+  fix: Set TARGETED_DEVICE_FAMILY to 2 explicitly on app and test targets.
+  commit: f5f8bdc77a59d8838a647b906356eb7a13cc397b
+  run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43407486645
+  status: in_progress
+  user_device_status: AltStore installation started; successful open not yet confirmed.
+  next_task: Finish package validation and deliver the IPA for physical iPad and S24 testing.
+
+mini4_delivery:
+  status: ipa_ready_for_device_testing
+  code_commit: f5f8bdc77a59d8838a647b906356eb7a13cc397b
+  successful_run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43407486645
+  artifact_id: 14027684325
+  artifact_url: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43407486645/artifacts/14027684325
+  local_ipa: outputs/HeadunitPad-Mini4-unsigned.ipa
+  ipa_sha256: 71bcfe9188ef04b4ea7f745d436fef15271154ebc9fc71658977218060bad31e
+  verification:
+    - Seven tests passed; zero failed on Xcode 26.3 hosted iPad simulator.
+    - App launch succeeded and screenshot showed connection screen and microphone prompt.
+    - Generic arm64 device build and all IPA package checks passed.
+    - Downloaded artifact archive SHA256 matched GitHub's reported digest.
+    - Independently verified downloaded IPA resources, privacy declarations, iPad device family and framework minimum OS versions.
+    - Parsed actual Mach-O header and LC_BUILD_VERSION locally; executable is arm64 and minimum OS is iOS 15.0.
+  physical_validation: Not performed; do not claim proven mini 4/S24 operation.
+  remaining:
+    - Confirm AltStore installation and import the unsigned IPA on the iPad.
+    - Connect the S24 and complete MINI4-SETUP.md acceptance checklist.
+  next_task: Physical iPad mini 4 and Galaxy S24 wireless acceptance testing.

@@ -1,3 +1,5 @@
+> **iPad mini 4 / iPadOS 15:** use the separate wireless variant described in [MINI4-SETUP.md](MINI4-SETUP.md). The iPad-only IPA has passed hosted build, simulator tests, launch, and package checks. Physical mini 4/S24 operation still needs testing.
+
 # HeadunitPad
 
 **Transform your iPad into an Android Auto display screen.**

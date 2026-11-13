@@ -66,3 +66,9 @@ Thumbs.db
 HeadunitPadMini4.xcodeproj/
 mini4/HeadunitPadMini4.xcworkspace/
 __pycache__/
+
+# Locally downloaded app packages and simulator screenshots
+outputs/
+
+# Locally downloaded app packages and simulator screenshots
+outputs/

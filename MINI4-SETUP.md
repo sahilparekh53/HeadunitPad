@@ -4,6 +4,18 @@ Target hardware: iPad mini 4 running iPadOS 15.8.5 and Samsung Galaxy S24.
 This variant uses wireless Android Auto. Device operation remains unverified
 until it is installed and tested on that hardware.
 
+## Verified downloadable build
+
+The [successful hosted build](https://github.com/sahilparekh53/HeadunitPad/actions/runs/43407486645)
+passed all seven tests, launched on an iPad simulator, and produced a verified
+arm64 IPA with a binary minimum OS of 15.0 and iPad-only device family.
+
+[Download the ZIP containing the unsigned IPA](https://github.com/sahilparekh53/HeadunitPad/actions/runs/43407486645/artifacts/14027684325).
+GitHub may require sign-in. On the iPad, open this link in Safari, download the
+ZIP, tap it in Files to extract it, then open AltStore > My Apps > + and select
+`HeadunitPad-Mini4-unsigned.ipa`. Keep the PC running AltServer while installing.
+This confirms build compatibility; physical iPad mini 4 / S24 testing remains pending.
+
 ## Build from Windows
 
 1. Open your GitHub fork's Actions page and select **Build iPad mini 4**.
