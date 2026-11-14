@@ -576,8 +576,7 @@ class MainViewController: UIViewController {
 #if HEADUNIT_WIRELESS_ONLY
         connectButton.configuration?.title = ProjectionSettings.connectionPreferences.hasConnectedBefore ? "Reconnect" : "Connect"
         dashboard.updateProfile()
-        return
-#endif
+#else
         let title: String
         switch ProjectionSettings.connectionMode {
         case .auto:
@@ -588,6 +587,7 @@ class MainViewController: UIViewController {
             title = "Wireless: Scan Headunit"
         }
         connectButton.configuration?.title = title
+#endif
     }
 
     private func startVideoWatchdog() {

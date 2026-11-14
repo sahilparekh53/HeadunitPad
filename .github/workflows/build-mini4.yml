@@ -50,10 +50,10 @@ jobs:
           python3 .build/ios-simulator-skill/ios-simulator-skill/skills/ios-simulator-skill/scripts/build_and_test.py \
             --workspace mini4/HeadunitPadMini4.xcworkspace \
             --scheme HeadunitPadMini4 --simulator "$SIMULATOR_NAME" --test --no-parallel --verbose
-          python3 .build/ios-simulator-skill/ios-simulator-skill/skills/ios-simulator-skill/scripts/build_and_test.py \
-            --workspace mini4/HeadunitPadMini4.xcworkspace \
-            --scheme HeadunitPadMini4 --simulator "$SIMULATOR_NAME" --run --verbose
-          xcrun simctl io booted screenshot "$RUNNER_TEMP/mini4-launch.png"
+          for result in "$HOME"/.ios-simulator-skill/xcresults/*.xcresult; do
+            xcrun xcresulttool export attachments --path "$result" \
+              --output-path "$RUNNER_TEMP/mini4-screenshots/$(basename "$result")"
+          done
       - name: Build and verify unsigned iPad IPA
         run: bash scripts/build_mini4_ipa.sh "$RUNNER_TEMP/mini4-ipa"
       - name: Upload IPA for Windows sideloading
@@ -70,5 +70,5 @@ jobs:
           include-hidden-files: true
           path: |
             ~/.ios-simulator-skill/xcresults/*.xcresult
-            ${{ runner.temp }}/mini4-launch.png
+            ${{ runner.temp }}/mini4-screenshots/**
           if-no-files-found: ignore
