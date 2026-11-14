@@ -1,10 +1,26 @@
 # HeadunitPad for iPad mini 4
 
 Target hardware: iPad mini 4 running iPadOS 15.8.5 and Samsung Galaxy S24.
-This variant uses wireless Android Auto. Device operation remains unverified
-until it is installed and tested on that hardware.
+This variant uses wireless Android Auto. The user has confirmed video, audio
+and touch work on this iPad/S24 with the v0.4 baseline. The v0.5 experience
+upgrade still needs a repeat check on the physical devices after installation.
 
-## Verified downloadable build
+## v0.5 experience build
+
+[Download the verified v0.5 IPA ZIP](https://github.com/sahilparekh53/HeadunitPad/actions/runs/43611572733/artifacts/14121145595).
+Extract it in Files, then import its IPA in AltStore with AltServer available.
+Connect once to save your successful phone endpoint. Test Stop, reopening the
+app and recovery after backgrounding on the actual mini 4/S24.
+
+The [successful Mac run](https://github.com/sahilparekh53/HeadunitPad/actions/runs/43611572733)
+passed all 15 tests, including two UI tests, and built the arm64 iPadOS 15 IPA.
+Local checks verified its actual binary minimum OS, version 0.5.0, iPad-only
+family, protocol resources and privacy declarations. The [full-display capture follow-up](https://github.com/sahilparekh53/HeadunitPad/actions/runs/43613336690)
+also passed all 15 tests. Its screenshot was inspected and shows the dashboard
+and controls fitting the landscape display. No new on-device performance measurement has been taken.
+
+## Previous verified downloadable build
+
 
 The [successful hosted build](https://github.com/sahilparekh53/HeadunitPad/actions/runs/43407486645)
 passed all seven tests, launched on an iPad simulator, and produced a verified
@@ -14,7 +30,21 @@ arm64 IPA with a binary minimum OS of 15.0 and iPad-only device family.
 GitHub may require sign-in. On the iPad, open this link in Safari, download the
 ZIP, tap it in Files to extract it, then open AltStore > My Apps > + and select
 `HeadunitPad-Mini4-unsigned.ipa`. Keep the PC running AltServer while installing.
-This confirms build compatibility; physical iPad mini 4 / S24 testing remains pending.
+The user confirms Android Auto video, audio and touch work with this baseline.
+The full acceptance checklist below has not been independently recorded.
+
+## Experience upgrade
+
+The `mini4-seamless` branch adds a landscape dashboard, a remembered successful
+phone address, optional automatic connection on opening, capped retry delays,
+Stop/Cancel behavior, foreground recovery and a mini 4 display preset.
+Connect successfully once after upgrading to save the phone. The phone must
+still expose its Android Auto head unit server. These changes do not add
+native Wi-Fi Direct or USB to the mini 4 package.
+
+See [the reference comparison](docs/OPEN-HEADUNIT-COMPARISON.md) for evidence
+and transport limits, and [permanent-install preparation](docs/PERMANENT-INSTALL.md)
+for the reviewed TrollStore route. No device setup changes have been performed.
 
 ## Build from Windows
 

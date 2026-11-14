@@ -1,4 +1,4 @@
-> **iPad mini 4 / iPadOS 15:** use the separate wireless variant described in [MINI4-SETUP.md](MINI4-SETUP.md). The iPad-only IPA has passed hosted build, simulator tests, launch, and package checks. Physical mini 4/S24 operation still needs testing.
+> **iPad mini 4 / iPadOS 15:** use the separate wireless variant described in [MINI4-SETUP.md](MINI4-SETUP.md). The iPad-only IPA has passed hosted build, simulator tests, launch, and package checks. The user has confirmed Android Auto video, audio and touch on the v0.4 wireless baseline. The `mini4-seamless` branch contains the experience upgrade; its new build still needs a physical-device check.
 
 # HeadunitPad
 

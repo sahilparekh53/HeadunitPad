@@ -450,3 +450,63 @@ seamless_work_in_progress:
     - Concrete TrollStore/TrollRestore plan recorded in docs/PERMANENT-INSTALL.md.
     - No modified backup, system-app replacement or device security setting change performed.
   next_task: Resolve hosted checks and deliver the reviewed IPA before device-level setup.
+
+seamless_build_followup:
+  code_commit: 59abd17bac6aaf475955a4d15468dda8119c9936
+  run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43611572733
+  status: in_progress
+  prior_test_evidence:
+    commit: bbff14535a3fe371a4183b17e174816392b81641
+    result: All 15 tests passed, including two dashboard UI tests.
+    limitation: Run cancelled during redundant post-test launch; no IPA from that run.
+  fixes:
+    - Ignore cancelled-session transport callbacks and obsolete queued status updates.
+    - Permit hidden dashboard buttons to collapse without required-height conflicts.
+    - Export UI-test screenshot attachments instead of a redundant simulator launch.
+  current_checks:
+    - Latest changed Swift syntax and workflow YAML parse successfully.
+    - Whitespace checks and Python scripts compile successfully.
+  remaining:
+    - Complete current hosted tests, inspect screenshots and verify device IPA.
+    - Install the new IPA and retest reconnection on the actual mini 4 and S24.
+  device_changes: None; USB and permanent-install setup remain separate.
+
+seamless_verified_package:
+  code_commit: 59abd17bac6aaf475955a4d15468dda8119c9936
+  run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43611572733
+  conclusion: success
+  tests: 15 passed, zero failed, including two dashboard UI tests.
+  ipa_artifact: 14121145595
+  ipa_sha256: 22f178dffd67221652366205d55274f408ea1c6230ed67ba2901c8a74018099c
+  local_ipa: outputs/HeadunitPad-Mini4-v0.5-unsigned.ipa
+  qr: outputs/HeadunitPad-v0.5-download-QR.png
+  package_checks: Actual arm64 Mach-O minimum iOS 15.0, version 0.5.0, iPad family, fullscreen, resources and privacy checks passed.
+  visual_review: Exported app screenshot was cropped/oriented incorrectly; full-display capture pending.
+  capture_followup:
+    failed_run: 43612877120
+    cause: Incorrect XCUIDevice screenshot API in test-only follow-up; no change to verified app code.
+    corrected_commit: 5274365e9efbb383d3e1301a4d55788fd332f4dd
+    corrected_run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43613336690
+    api_reference: https://developer.apple.com/documentation/xcuiautomation/xcuiscreen
+  physical_checks: Baseline confirmed by user; new reconnect behavior and performance remain unmeasured on physical mini 4/S24.
+  remaining: Visual capture review, new-version physical acceptance and separately approved permanent installation.
+
+seamless_release_handoff:
+  implementation_and_package: complete
+  current_task_status: in_progress_pending_physical_acceptance
+  app_code_verified_commit: 59abd17bac6aaf475955a4d15468dda8119c9936
+  branch_head_before_documentation: 5274365e9efbb383d3e1301a4d55788fd332f4dd
+  visual_followup_run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43613336690
+  visual_followup_result: All 15 tests passed; device build and package checks passed.
+  screenshot_review: Full-display landscape capture inspected; dashboard and settings controls fit without the app-screenshot cropping issue.
+  screenshot: outputs/HeadunitPad-v0.5-dashboard.png
+  downloadable_build: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43611572733/artifacts/14121145595
+  notes: Later commits change test screenshot capture only; app code is the same as the locally verified IPA.
+  remaining:
+    - Install v0.5 and check successful endpoint persistence, reopening, Stop and foreground recovery on the mini 4/S24.
+    - User decision on the documented TrollStore route before backup restore, system-app replacement or Find My changes.
+  future_not_implemented:
+    - Native Android-compatible iPad Wi-Fi Direct.
+    - iOS 15 USBHostKit backport and Lightning/AOA hardware test; user currently lacks the proposed powered adapter.
+  performance: No new physical-device benchmark or extended-session result collected.
+  next_task: Physical acceptance of the delivered wireless experience build.
