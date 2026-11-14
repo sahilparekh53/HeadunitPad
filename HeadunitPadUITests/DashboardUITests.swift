@@ -31,7 +31,7 @@ final class DashboardUITests: XCTestCase {
         XCTAssertTrue(app.alerts["Enter IP Address"].waitForExistence(timeout: 3))
         app.alerts.buttons["Cancel"].tap()
         XCTAssertTrue(connect.isHittable)
-        let attachment = XCTAttachment(screenshot: XCUIDevice.shared.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "HeadunitPad landscape dashboard"
         attachment.lifetime = .keepAlways
         add(attachment)
