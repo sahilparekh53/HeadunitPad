@@ -28,6 +28,7 @@ final class HeadunitDashboardView: UIView {
         car.tintColor = .systemTeal
         car.contentMode = .scaleAspectFit
         car.widthAnchor.constraint(equalToConstant: 48).isActive = true
+        car.heightAnchor.constraint(equalToConstant: 48).isActive = true
         let titles = UIStackView(arrangedSubviews: [title, subtitle])
         titles.axis = .vertical
         titles.spacing = 5
@@ -46,7 +47,9 @@ final class HeadunitDashboardView: UIView {
         progress.alignment = .center
 
         for button in [connect, address, stop] {
-            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 52).isActive = true
+            let minimumHeight = button.heightAnchor.constraint(greaterThanOrEqualToConstant: 52)
+            minimumHeight.priority = .defaultHigh
+            minimumHeight.isActive = true
             button.titleLabel?.adjustsFontSizeToFitWidth = true
             button.titleLabel?.minimumScaleFactor = 0.75
         }

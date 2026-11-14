@@ -473,3 +473,25 @@ seamless_baseline:
   skills_installed: [android-reverse-engineering, swift-coding-standards, ios-code-review]
   current_scope: Preserve the working protocol and improve supported iPad behavior.
   device_changes: No TrollStore injection, modified backup, system app replacement or Find My changes performed.
+
+seamless_work_in_progress:
+  code_branch: mini4-seamless
+  initial_commit: bbff14535a3fe371a4183b17e174816392b81641
+  run: https://github.com/sahilparekh53/HeadunitPad/actions/runs/43610209429
+  implemented:
+    - Native dark UIKit dashboard with large accessible connection controls.
+    - Saved successful direct endpoint, opt-out connection on open and preferred-address retry before discovery.
+    - Bounded retry delay, stale-timer rejection, manual cancellation and foreground recovery.
+    - Session screen-wake management, mini 4 display preset and release trace reduction.
+    - Full-screen mini 4 configuration and new preference/retry and UI smoke tests.
+  validation:
+    - Local Swift syntax, YAML and whitespace checks passed.
+    - Hosted tests, simulator layout, device build and IPA verification in progress.
+  transport_followup:
+    - Native iPad Wi-Fi Direct is not implemented or proved; S24 hotspot/shared Wi-Fi remain supported.
+    - User has a USB-C-to-Lightning cable only, not the powered camera adapter needed for the proposed USB host test.
+    - UTM documents a Lightning/exploit USB route, but HeadunitPad on this exact hardware remains unverified.
+  permanent_install:
+    - Concrete TrollStore/TrollRestore plan recorded in docs/PERMANENT-INSTALL.md.
+    - No modified backup, system-app replacement or device security setting change performed.
+  next_task: Resolve hosted checks and deliver the reviewed IPA before device-level setup.

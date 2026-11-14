@@ -42,3 +42,11 @@ The mini 4 is compatible with Apple's [Lightning to USB 3 Camera Adapter](https:
 Upstream HeadunitPad's wired path uses TrollUSBHostKit, AOA negotiation and private USB entitlements. The inspected package declares iOS 16 minimum; changing that declaration alone does not prove iOS 15 compatibility. A separate iOS 15 package build and a TrollStore-installed physical USB probe are required before enabling wired mode in the mini 4 release. The existing upstream proof is for a newer USB-C iPad, not this Lightning mini 4.
 
 No wired or native-P2P support is claimed in this release. Keep the proven wireless build as the baseline while these transports are investigated.
+
+## Hardware follow-up
+
+The user currently has a USB-C-to-Lightning cable, not the powered Lightning camera adapter. That cable alone does not establish the proposed iPad-host / Android-accessory topology. USB hardware acceptance cannot run with the current cable alone.
+
+UTM's [USB sharing documentation](https://docs.getutm.app/guest-support/sharing/usb/) documents exploit-enabled iOS USB access and explicitly names the Lightning to USB 3 Camera Adapter for Lightning devices. This supports investigating the transport, but is not proof that HeadunitPad's AOA path works on this mini 4.
+
+The inspected TrollUSBHostKit source commit is `ecfd7fbc59ec340509d568da2400d7f0d94a892e`. It uses the UTM libusb fork and private IOKit USB user clients. A separately pinned, compiled iOS 15 consumer and a physical entitlement/enumeration/AOA test remain required.

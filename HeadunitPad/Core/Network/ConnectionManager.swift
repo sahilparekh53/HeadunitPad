@@ -526,7 +526,7 @@ class ConnectionManager {
         statusDetail = status
         print("ConnectionManager: status = \(status)")
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+            guard let self, self.statusDetail == status else { return }
             self.delegate?.connectionManager(self, didUpdateStatus: status)
         }
     }
@@ -669,6 +669,7 @@ extension ConnectionManager: DiscoveryDelegate {
 
 extension ConnectionManager: AapTransportDelegate {
     func aapTransport(_ transport: AapTransport, didRequestMicrophoneCapture isOpen: Bool) {
+        guard transport === aapTransport, !isOpen || !isUserInitiatedDisconnect else { return }
         if isOpen {
             microphoneCapture.start(sampleRate: 16_000, channels: 1)
         } else {
@@ -677,6 +678,7 @@ extension ConnectionManager: AapTransportDelegate {
     }
 
     func aapTransport(_ transport: AapTransport, didRequestLocationUpdates isEnabled: Bool) {
+        guard transport === aapTransport, !isEnabled || !isUserInitiatedDisconnect else { return }
         if isEnabled {
             locationCapture.start()
         } else {
@@ -734,7 +736,7 @@ extension ConnectionManager: AapTransportDelegate {
     }
 
     func aapTransport(_ transport: AapTransport, didChangeState state: AapTransportState) {
-        guard transport === aapTransport else { return }
+        guard transport === aapTransport, !isUserInitiatedDisconnect else { return }
         switch state {
         case .running:
             reconnectAttempt = 0
@@ -888,6 +890,10 @@ extension ConnectionManager: AapTransportDelegate {
 
 extension ConnectionManager: WirelessHelperServerDelegate {
     func wirelessHelperServer(_ server: WirelessHelperServer, didAccept connection: NWConnection, remoteHost: String?) {
+        guard isApplicationActive, hasSessionIntent, !isUserInitiatedDisconnect else {
+            connection.cancel()
+            return
+        }
         let canAccept: Bool
         switch state {
         case .discovering, .waitingForWirelessHelper, .disconnected, .error:

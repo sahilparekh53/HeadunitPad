@@ -8,6 +8,7 @@ on:
     paths:
       - 'HeadunitPad/**'
       - 'HeadunitPadTests/**'
+      - 'HeadunitPadUITests/**'
       - 'mini4/**'
       - 'project-mini4.yml'
       - 'scripts/*mini4*'
