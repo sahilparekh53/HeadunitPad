@@ -86,7 +86,11 @@ class ConnectionManager {
     private var isUserInitiatedDisconnect = false
     private var hasTriggeredWirelessHelper = false
     private var hasReceivedAaMediaMetadata = false
-    private let reconnectDelay: TimeInterval = 2.0
+    private var reconnectAttempt = 0
+    private var reconnectGeneration = 0
+    private var isApplicationActive = true
+    private var hasSessionIntent = false
+    private var trySavedEndpointOnNextReconnect = true
 #if !HEADUNIT_WIRELESS_ONLY
     private var usbProbeTask: Task<Void, Never>?
     private var usbCleanupTask: Task<Void, Never>?
@@ -150,8 +154,7 @@ class ConnectionManager {
             return
         }
 
-        reconnectWorkItem?.cancel()
-        reconnectWorkItem = nil
+        cancelScheduledReconnect()
         isUserInitiatedDisconnect = false
         usbProbeDiagnostics = AOAProbeDiagnostics()
         usbProbeState = .running("Searching for USB devices")
@@ -214,7 +217,60 @@ class ConnectionManager {
     }
 
 #endif
+    func resumeAutomaticConnectionIfNeeded() {
+        let preferences = ProjectionSettings.connectionPreferences
+        guard ReconnectPolicy.canResume(isActive: isApplicationActive,
+            stoppedByUser: isUserInitiatedDisconnect, hasSessionIntent: hasSessionIntent,
+            automaticOnOpen: preferences.automaticallyConnectsOnOpen,
+            hasConnectedBefore: preferences.hasConnectedBefore) else { return }
+        switch state {
+        case .disconnected, .error:
+            startPreferredConnection()
+        default:
+            break
+        }
+    }
+
+    func startPreferredConnection() {
+        guard isApplicationActive else { return }
+        switch state {
+        case .disconnected, .error, .waitingForWirelessHelper:
+            break
+        default:
+            return
+        }
+        hasSessionIntent = true
+        isUserInitiatedDisconnect = false
+        if ProjectionSettings.connectionMode != .wirelessHelper,
+           let endpoint = ProjectionSettings.connectionPreferences.lastEndpoint {
+            trySavedEndpointOnNextReconnect = false
+            connect(to: endpoint.host, port: endpoint.port)
+        } else {
+            startDiscovery()
+        }
+    }
+
+    func applicationDidBecomeActive() {
+        isApplicationActive = true
+        resumeAutomaticConnectionIfNeeded()
+    }
+
+    func applicationWillResignActive() {
+        isApplicationActive = false
+        cancelScheduledReconnect()
+    }
+
+    func applicationDidEnterBackground() {
+        applicationWillResignActive()
+        if state == .discovering || state == .waitingForWirelessHelper {
+            stopDiscovery()
+            wirelessHelperServer.stop()
+        }
+    }
+
     func startDiscovery() {
+        guard isApplicationActive else { return }
+        hasSessionIntent = true
         print("ConnectionManager: startDiscovery called")
 #if !HEADUNIT_WIRELESS_ONLY
         guard usbProbeTask == nil else {
@@ -222,8 +278,7 @@ class ConnectionManager {
             return
         }
 #endif
-        reconnectWorkItem?.cancel()
-        reconnectWorkItem = nil
+        cancelScheduledReconnect()
         isUserInitiatedDisconnect = false
         let canStart: Bool
         switch state {
@@ -262,8 +317,7 @@ class ConnectionManager {
 
     func stopDiscovery() {
         print("ConnectionManager: stopDiscovery called")
-        reconnectWorkItem?.cancel()
-        reconnectWorkItem = nil
+        cancelScheduledReconnect()
         discovery.stopScan()
         if state == .discovering || state == .waitingForWirelessHelper {
             state = .disconnected
@@ -272,9 +326,10 @@ class ConnectionManager {
     }
 
     func connect(to device: DiscoveredDevice) {
+        guard isApplicationActive else { return }
+        hasSessionIntent = true
         print("ConnectionManager: connect(to:) called with device: \(device.displayName)")
-        reconnectWorkItem?.cancel()
-        reconnectWorkItem = nil
+        cancelScheduledReconnect()
         isUserInitiatedDisconnect = false
         let preparedConnection = discovery.takePreparedConnection(ip: device.ip, port: device.port)
         stopDiscovery()
@@ -305,8 +360,10 @@ class ConnectionManager {
         guard usbCleanupTask == nil else { return }
 #endif
         isUserInitiatedDisconnect = true
-        reconnectWorkItem?.cancel()
-        reconnectWorkItem = nil
+        hasSessionIntent = false
+        reconnectAttempt = 0
+        discovery.stopScan()
+        cancelScheduledReconnect()
 #if !HEADUNIT_WIRELESS_ONLY
         stopUSBProbe()
 #endif
@@ -474,24 +531,42 @@ class ConnectionManager {
         }
     }
 
+    private func cancelScheduledReconnect() {
+        reconnectGeneration += 1
+        reconnectWorkItem?.cancel()
+        reconnectWorkItem = nil
+    }
+
     private func scheduleReconnectIfNeeded(reason: String) {
+        guard isApplicationActive, hasSessionIntent else { return }
         guard ProjectionSettings.autoReconnect else { return }
         guard !isUserInitiatedDisconnect else { return }
         guard reconnectWorkItem == nil else { return }
 
-        updateStatus("\(reason). Reconnecting soon...")
+        let delay = ReconnectPolicy.delay(attempt: reconnectAttempt)
+        reconnectAttempt += 1
+        updateStatus("\(reason). Trying again in \(Int(delay)) seconds…")
+        let generation = reconnectGeneration
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
+            guard let self, self.reconnectGeneration == generation else { return }
             self.reconnectWorkItem = nil
             switch self.state {
             case .disconnected, .error:
-                self.startDiscovery()
+                guard self.isApplicationActive, !self.isUserInitiatedDisconnect else { return }
+                if self.trySavedEndpointOnNextReconnect,
+                   ProjectionSettings.connectionMode != .wirelessHelper,
+                   let endpoint = ProjectionSettings.connectionPreferences.lastEndpoint {
+                    self.trySavedEndpointOnNextReconnect = false
+                    self.connect(to: endpoint.host, port: endpoint.port)
+                } else {
+                    self.startDiscovery()
+                }
             default:
                 break
             }
         }
         reconnectWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + reconnectDelay, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
     private func localIPv4Address() -> String? {
@@ -537,6 +612,8 @@ class ConnectionManager {
 
 extension ConnectionManager: DiscoveryDelegate {
     func discoveryDidFindDevice(_ device: DiscoveredDevice) {
+        guard isApplicationActive, hasSessionIntent, !isUserInitiatedDisconnect,
+              state == .discovering || state == .waitingForWirelessHelper else { return }
         if device.port == Discovery.launcherPort {
             print("ConnectionManager: triggered wireless helper launcher at \(device.ip):\(device.port)")
             hasTriggeredWirelessHelper = true
@@ -547,7 +624,12 @@ extension ConnectionManager: DiscoveryDelegate {
         print("ConnectionManager: discovered device: \(device.displayName)")
         discoveredDevices.append(device)
         updateStatus("Found Headunit Server at \(device.ip):\(device.port)")
-        delegate?.connectionManager(self, didDiscoverDevice: device)
+        if let saved = ProjectionSettings.connectionPreferences.lastEndpoint,
+           saved.host == device.ip, saved.port == device.port {
+            connect(to: device)
+        } else {
+            delegate?.connectionManager(self, didDiscoverDevice: device)
+        }
     }
 
     func discoveryDidFinish() {
@@ -576,6 +658,8 @@ extension ConnectionManager: DiscoveryDelegate {
     }
 
     func discoveryDidFail(_ error: Error) {
+        guard isApplicationActive, hasSessionIntent, !isUserInitiatedDisconnect,
+              state == .discovering || state == .waitingForWirelessHelper else { return }
         print("ConnectionManager: discovery failed with error: \(error.localizedDescription)")
         state = .error(error.localizedDescription)
         updateStatus(error.localizedDescription)
@@ -653,6 +737,13 @@ extension ConnectionManager: AapTransportDelegate {
         guard transport === aapTransport else { return }
         switch state {
         case .running:
+            reconnectAttempt = 0
+            trySavedEndpointOnNextReconnect = true
+            if activeConnection is TcpHandler, let device = connectedDevice {
+                let endpoint = device.port == Discovery.headunitPort
+                    ? SavedPhoneEndpoint(host: device.ip, port: device.port) : nil
+                ProjectionSettings.connectionPreferences.rememberSuccessfulConnection(endpoint: endpoint)
+            }
             NowPlayingCoordinator.shared.activate()
             self.state = .running
 #if HEADUNIT_WIRELESS_ONLY

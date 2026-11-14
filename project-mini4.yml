@@ -32,12 +32,12 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: local.headunitpad.mini4
         TARGETED_DEVICE_FAMILY: "2"
         PRODUCT_NAME: HeadunitPad
-        INFOPLIST_FILE: HeadunitPad/Info.plist
+        INFOPLIST_FILE: mini4/Info.plist
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: HeadunitPad
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "0.4.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "0.5.0"
+        CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_ENTITLEMENTS: ""
   HeadunitPadMini4Tests:
     type: bundle.unit-test
@@ -45,6 +45,8 @@ targets:
     sources:
       - HeadunitPadTests/H264NALParserTests.swift
       - HeadunitPadTests/ByteStreamConnectionTests.swift
+      - HeadunitPadTests/ConnectionPreferencesTests.swift
+      - HeadunitPad/Core/Settings/ConnectionPreferences.swift
       - HeadunitPad/Core/Video/H264NALParser.swift
       - HeadunitPad/Core/Network/ByteStreamConnection.swift
       - HeadunitPad/Core/Network/TcpHandler.swift
@@ -56,13 +58,28 @@ targets:
         TARGETED_DEVICE_FAMILY: "2"
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+  HeadunitPadMini4UITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - HeadunitPadUITests
+    dependencies:
+      - target: HeadunitPad
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.headunitpad.mini4.uitests
+        TARGETED_DEVICE_FAMILY: "2"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: HeadunitPad
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
 schemes:
   HeadunitPadMini4:
     build:
       targets:
         HeadunitPad: all
         HeadunitPadMini4Tests: [test]
+        HeadunitPadMini4UITests: [test]
     test:
       targets:
         - HeadunitPadMini4Tests
-
+        - HeadunitPadMini4UITests

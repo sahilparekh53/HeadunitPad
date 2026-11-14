@@ -22,6 +22,13 @@ class MainViewController: UIViewController {
     private var lastVideoFrameTs: TimeInterval = 0
     private var hasReceivedFirstVideoFrame = false
     private var lastVideoRecoveryTs: TimeInterval = 0
+#if HEADUNIT_WIRELESS_ONLY
+    private var isSceneActive = true
+    private var wasBackgrounded = false
+    private lazy var dashboard = HeadunitDashboardView(title: titleLabel, subtitle: subtitleLabel,
+        status: statusLabel, connect: connectButton, address: manualIPButton,
+        stop: disconnectButton, spinner: activityIndicator)
+#endif
 
     // MARK: - UI Components
 
@@ -152,6 +159,9 @@ class MainViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+#if HEADUNIT_WIRELESS_ONLY
+        overrideUserInterfaceStyle = .dark
+#endif
         setupUI()
         setupConstraints()
         connectionManager.delegate = self
@@ -171,7 +181,54 @@ class MainViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         applyOrientationLock()
+#if HEADUNIT_WIRELESS_ONLY
+        connectionManager.resumeAutomaticConnectionIfNeeded()
+#endif
     }
+
+    override var prefersStatusBarHidden: Bool { connectionManager.state == .running }
+    override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
+
+#if HEADUNIT_WIRELESS_ONLY
+    func applicationDidBecomeActive() {
+        isSceneActive = true
+        applyOrientationLock()
+        connectionManager.applicationDidBecomeActive()
+        if wasBackgrounded, connectionManager.state == .running {
+            connectionManager.requestVideoRecoveryForNewDisplay()
+        }
+        wasBackgrounded = false
+        refreshSessionPresentation(connectionManager.state)
+    }
+
+    func applicationWillResignActive() {
+        isSceneActive = false
+        UIApplication.shared.isIdleTimerDisabled = false
+        connectionManager.applicationWillResignActive()
+    }
+
+    func applicationDidEnterBackground() {
+        wasBackgrounded = true
+        applicationWillResignActive()
+        connectionManager.applicationDidEnterBackground()
+    }
+
+    private func refreshSessionPresentation(_ state: ConnectionState) {
+        dashboard.isHidden = state == .running
+        dashboard.updateProfile()
+        setNeedsStatusBarAppearanceUpdate()
+        switch state {
+        case .discovering, .waitingForWirelessHelper, .connecting, .handshaking:
+            disconnectButton.isHidden = false
+            disconnectButton.configuration?.title = "Cancel connection"
+            UIApplication.shared.isIdleTimerDisabled = isSceneActive
+        case .running:
+            UIApplication.shared.isIdleTimerDisabled = isSceneActive
+        default:
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+    }
+#endif
 
     override var shouldAutorotate: Bool {
         return false
@@ -236,6 +293,11 @@ class MainViewController: UIViewController {
         touchOverlayView.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(videoContainerView)
+#if HEADUNIT_WIRELESS_ONLY
+        view.addSubview(dashboard)
+        view.addSubview(settingsButton)
+        settingsButton.accessibilityLabel = "Connection and display settings"
+#else
         view.addSubview(titleLabel)
         view.addSubview(subtitleLabel)
         view.addSubview(statusLabel)
@@ -248,6 +310,7 @@ class MainViewController: UIViewController {
 #endif
         view.addSubview(disconnectButton)
 
+#endif
         NSLayoutConstraint.activate([
             videoRenderer.leadingAnchor.constraint(equalTo: videoContainerView.leadingAnchor),
             videoRenderer.trailingAnchor.constraint(equalTo: videoContainerView.trailingAnchor),
@@ -269,7 +332,7 @@ class MainViewController: UIViewController {
             }
 
             if action == .DOWN || action == .UP || action == .POINTER_DOWN || action == .POINTER_UP || action == .CANCEL {
-                print("MainViewController: Touch action=\(action) pointers=\(mappedPointers.count) actionIndex=\(actionIndex)")
+                projectionTrace("MainViewController: Touch action=\(action) pointers=\(mappedPointers.count) actionIndex=\(actionIndex)")
             }
 
             self.connectionManager.sendTouchEvent(pointers: mappedPointers, action: action, actionIndex: actionIndex)
@@ -282,6 +345,23 @@ class MainViewController: UIViewController {
     private let connectControlWidth: CGFloat = 300
 
     private func setupConstraints() {
+#if HEADUNIT_WIRELESS_ONLY
+        NSLayoutConstraint.activate([
+            videoContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            videoContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            videoContainerView.topAnchor.constraint(equalTo: view.topAnchor),
+            videoContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            dashboard.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            dashboard.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            dashboard.topAnchor.constraint(equalTo: view.topAnchor),
+            dashboard.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            settingsButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            settingsButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            settingsButton.widthAnchor.constraint(equalToConstant: 48),
+            settingsButton.heightAnchor.constraint(equalToConstant: 48)
+        ])
+#else
+
         NSLayoutConstraint.activate([
             videoContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             videoContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -333,6 +413,7 @@ class MainViewController: UIViewController {
             activityIndicator.topAnchor.constraint(equalTo: usbProbeButton.bottomAnchor, constant: 24)
         ])
 #endif
+    #endif
     }
 
     // MARK: - UI Updates
@@ -483,12 +564,20 @@ class MainViewController: UIViewController {
             disconnectButton.isHidden = true
             activityIndicator.stopAnimating()
         }
+#if HEADUNIT_WIRELESS_ONLY
+        refreshSessionPresentation(state)
+#endif
     }
 
     /// The connection mode setting only selects between wireless strategies, so
     /// every title here stays under the Wireless label. The wired path has its own
     /// button and does not participate in the mode.
     private func updateConnectButtonTitle() {
+#if HEADUNIT_WIRELESS_ONLY
+        connectButton.configuration?.title = ProjectionSettings.connectionPreferences.hasConnectedBefore ? "Reconnect" : "Connect"
+        dashboard.updateProfile()
+        return
+#endif
         let title: String
         switch ProjectionSettings.connectionMode {
         case .auto:
@@ -550,7 +639,11 @@ class MainViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func connectButtonTapped() {
+#if HEADUNIT_WIRELESS_ONLY
+        connectionManager.startPreferredConnection()
+#else
         connectionManager.startDiscovery()
+#endif
     }
 
     @objc private func manualIPButtonTapped() {
@@ -559,13 +652,20 @@ class MainViewController: UIViewController {
                                       preferredStyle: .alert)
 
         alert.addTextField { textField in
-            textField.placeholder = "192.168.0.189"
+            textField.placeholder = "Phone Wi-Fi address, e.g. 192.168.1.5"
+            textField.text = ProjectionSettings.connectionPreferences.lastEndpoint?.host
             textField.keyboardType = .decimalPad
+            textField.clearButtonMode = .whileEditing
+            textField.autocorrectionType = .no
         }
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Connect", style: .default) { [weak self] _ in
-            guard let ip = alert.textFields?.first?.text, !ip.isEmpty else { return }
+        alert.addAction(UIAlertAction(title: "Connect", style: .default) { [weak self, weak alert] _ in
+            guard let ip = alert?.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+            guard SavedPhoneEndpoint(host: ip, port: Discovery.headunitPort).isValid else {
+                self?.statusLabel.text = "Enter a valid phone Wi-Fi address, such as 192.168.1.5."
+                return
+            }
             self?.connectionManager.connect(to: ip, port: Discovery.headunitPort)
         })
 
@@ -627,6 +727,37 @@ class MainViewController: UIViewController {
             preferredStyle: .actionSheet
         )
 
+#if HEADUNIT_WIRELESS_ONLY
+        let preferences = ProjectionSettings.connectionPreferences
+        alert.addAction(UIAlertAction(title: "Auto-connect on open: \(preferences.automaticallyConnectsOnOpen ? "On" : "Off")", style: .default) { [weak self] _ in
+            preferences.automaticallyConnectsOnOpen.toggle()
+            self?.dashboard.updateProfile()
+        })
+        let profile = UIAlertAction(title: "Use iPad mini 4 profile · 720p / 30 FPS", style: .default) { [weak self] _ in
+            ProjectionSettings.orientation = .landscape
+            ProjectionSettings.videoResolution = .r1280x720
+            ProjectionSettings.fpsLimit = .fps30
+            ProjectionSettings.gpsSource = .phone
+            ProjectionSettings.resetDpiToDefault()
+            self?.applyOrientationLock()
+            self?.dashboard.updateProfile()
+        }
+        switch connectionManager.state {
+        case .disconnected, .error:
+            profile.isEnabled = true
+        default:
+            profile.isEnabled = false
+        }
+        alert.addAction(profile)
+        if preferences.hasConnectedBefore {
+            alert.addAction(UIAlertAction(title: "Forget saved phone", style: .destructive) { [weak self] _ in
+                self?.connectionManager.disconnect()
+                preferences.forgetPhone()
+                self?.updateConnectButtonTitle()
+            })
+        }
+#endif
+
         alert.addAction(UIAlertAction(title: "Connection Mode", style: .default) { [weak self] _ in
             self?.presentConnectionModeMenu()
         })
@@ -672,12 +803,14 @@ class MainViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Connection Details", style: .default) { [weak self] _ in
                 self?.presentConnectionDetails()
             })
+#if !HEADUNIT_WIRELESS_ONLY
             alert.addAction(UIAlertAction(title: "Open Video-Only Window", style: .default) { [weak self] _ in
                 self?.openVideoOnlyWindow()
             })
             alert.addAction(UIAlertAction(title: "Open Trackpad Window", style: .default) { [weak self] _ in
                 self?.openTrackpadWindow()
             })
+#endif
             alert.addAction(UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
                 self?.connectionManager.disconnect()
             })

@@ -610,7 +610,7 @@ class AapTransport {
             payload: payload
         )
 
-        print("AapTransport: Send touch action=\(action) pointers=\(pointers.count) actionIndex=\(actionIndex)")
+        projectionTrace("AapTransport: Send touch action=\(action) pointers=\(pointers.count) actionIndex=\(actionIndex)")
 
         send(message: message)
     }
@@ -638,7 +638,7 @@ class AapTransport {
             payload: payload
         )
 
-        print("AapTransport: Send keyCode=\(keyCode) isDown=\(isDown)")
+        projectionTrace("AapTransport: Send keyCode=\(keyCode) isDown=\(isDown)")
         send(message: message)
     }
 
@@ -1004,7 +1004,7 @@ class AapTransport {
         recordAapTrace(direction: "RX", channel: message.channel, flags: message.flags, type: message.type, payloadSize: message.payload.count)
 
         if message.channel != Channel.ID_VID && !Channel.isAudio(message.channel) && message.channel != Channel.ID_MIC {
-            print("AapTransport: Received message on channel \(Channel.name(for: message.channel)), type=\(message.type), size=\(message.payload.count)")
+            projectionTrace("AapTransport: Received message on channel \(Channel.name(for: message.channel)), type=\(message.type), size=\(message.payload.count)")
         }
 
         // Android Auto may carry control message types on non-control channels with flag 0x0f.
@@ -1054,12 +1054,12 @@ class AapTransport {
         case 0x8001:
             handleMediaPlaybackStatus(message.payload)
         case 0x8002:
-            print("AapTransport: MPB input/start response packet size=\(message.payload.count)")
+            projectionTrace("AapTransport: MPB input/start response packet size=\(message.payload.count)")
             break
         case 0x8003:
             handleMediaPlaybackMetadata(message)
         default:
-            print("AapTransport: MPB unhandled type=\(message.type) flags=\(message.flags) size=\(message.payload.count)")
+            projectionTrace("AapTransport: MPB unhandled type=\(message.type) flags=\(message.flags) size=\(message.payload.count)")
         }
     }
 
@@ -1072,7 +1072,7 @@ class AapTransport {
             mediaSource: source,
             playbackSeconds: seconds
         )
-        print("AapTransport: MPB status state=\(stateValue.map(String.init) ?? "-") source='\(source ?? "")' seconds=\(seconds.map(String.init) ?? "-")")
+        projectionTrace("AapTransport: MPB status state=\(stateValue.map(String.init) ?? "-") source='\(source ?? "")' seconds=\(seconds.map(String.init) ?? "-")")
         delegate?.aapTransport(self, didReceivePlaybackStatus: status)
     }
 
@@ -1082,13 +1082,13 @@ class AapTransport {
         case 0x09:
             mediaPlaybackMetadataBuffer = message.payload
             isAssemblingMediaPlaybackMetadata = true
-            print("AapTransport: MPB metadata fragment start size=\(mediaPlaybackMetadataBuffer.count)")
+            projectionTrace("AapTransport: MPB metadata fragment start size=\(mediaPlaybackMetadataBuffer.count)")
             payload = nil
         case 0x08:
             guard isAssemblingMediaPlaybackMetadata else { return }
             mediaPlaybackMetadataBuffer.append(mediaPlaybackContinuationPayload(from: message))
             if mediaPlaybackMetadataBuffer.count > maxMediaPlaybackMetadataBytes {
-                print("AapTransport: MPB metadata buffer exceeded limit, dropping \(mediaPlaybackMetadataBuffer.count) bytes")
+                projectionTrace("AapTransport: MPB metadata buffer exceeded limit, dropping \(mediaPlaybackMetadataBuffer.count) bytes")
                 mediaPlaybackMetadataBuffer.removeAll()
                 isAssemblingMediaPlaybackMetadata = false
             }
@@ -1104,7 +1104,7 @@ class AapTransport {
         }
 
         guard let payload else { return }
-        print("AapTransport: MPB metadata packet flags=\(message.flags) size=\(payload.count)")
+        projectionTrace("AapTransport: MPB metadata packet flags=\(message.flags) size=\(payload.count)")
         let metadata = AapMediaMetadata(
             title: ProtoWire.extractFirstString(from: payload, fieldNumber: 1),
             artist: ProtoWire.extractFirstString(from: payload, fieldNumber: 2),
@@ -1112,7 +1112,7 @@ class AapTransport {
             durationSeconds: ProtoWire.extractFirstVarint(from: payload, fieldNumber: 6),
             albumArt: ProtoWire.extractFirstBytes(from: payload, fieldNumber: 4)
         )
-        print("AapTransport: MPB metadata title='\(metadata.title ?? "")' artist='\(metadata.artist ?? "")' album='\(metadata.album ?? "")'")
+        projectionTrace("AapTransport: MPB metadata title='\(metadata.title ?? "")' artist='\(metadata.artist ?? "")' album='\(metadata.album ?? "")'")
         delegate?.aapTransport(self, didReceiveMediaMetadata: metadata)
     }
 
@@ -1132,7 +1132,7 @@ class AapTransport {
         switch message.type {
         case 0x8003: // NavigationStatus.MsgType.STATUS
             let status = ProtoWire.extractFirstVarint(from: message.payload, fieldNumber: 1)
-            print("AapTransport: NAV status=\(status.map(String.init) ?? "-")")
+            projectionTrace("AapTransport: NAV status=\(status.map(String.init) ?? "-")")
 
         case 0x8004: // NavigationStatus.MsgType.NEXTTURNDETAILS
             let road = ProtoWire.extractFirstString(from: message.payload, fieldNumber: 1) ?? ""
@@ -1143,19 +1143,19 @@ class AapTransport {
 
             let sideName = navSideName(side)
             let eventName = navEventName(nextTurn)
-            print("AapTransport: NAV detail road='\(road)' side=\(sideName)(\(side)) next=\(eventName)(\(nextTurn)) turnNo=\(turnNumber.map(String.init) ?? "-") angle=\(turnAngle.map(String.init) ?? "-")")
+            projectionTrace("AapTransport: NAV detail road='\(road)' side=\(sideName)(\(side)) next=\(eventName)(\(nextTurn)) turnNo=\(turnNumber.map(String.init) ?? "-") angle=\(turnAngle.map(String.init) ?? "-")")
 
         case 0x8005: // NavigationStatus.MsgType.NEXTTURNDISTANCEANDTIME
             let distance = ProtoWire.extractFirstVarint(from: message.payload, fieldNumber: 1)
             let time = ProtoWire.extractFirstVarint(from: message.payload, fieldNumber: 2)
-            print("AapTransport: NAV distance/time distanceM=\(distance.map(String.init) ?? "-") etaSec=\(time.map(String.init) ?? "-")")
+            projectionTrace("AapTransport: NAV distance/time distanceM=\(distance.map(String.init) ?? "-") etaSec=\(time.map(String.init) ?? "-")")
 
         default:
             let road = ProtoWire.extractFirstString(from: message.payload, fieldNumber: 1)
             let f1 = ProtoWire.extractFirstVarint(from: message.payload, fieldNumber: 1)
             let f2 = ProtoWire.extractFirstVarint(from: message.payload, fieldNumber: 2)
             let f3 = ProtoWire.extractFirstVarint(from: message.payload, fieldNumber: 3)
-            print("AapTransport: NAV unknown type=\(message.type) size=\(message.payload.count) road='\(road ?? "")' f1=\(f1.map(String.init) ?? "-") f2=\(f2.map(String.init) ?? "-") f3=\(f3.map(String.init) ?? "-")")
+            projectionTrace("AapTransport: NAV unknown type=\(message.type) size=\(message.payload.count) road='\(road ?? "")' f1=\(f1.map(String.init) ?? "-") f2=\(f2.map(String.init) ?? "-") f3=\(f3.map(String.init) ?? "-")")
         }
     }
 

@@ -38,14 +38,23 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+#if HEADUNIT_WIRELESS_ONLY
+        (window?.rootViewController as? MainViewController)?.applicationDidBecomeActive()
+#endif
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
+#if HEADUNIT_WIRELESS_ONLY
+        (window?.rootViewController as? MainViewController)?.applicationWillResignActive()
+#endif
     }
 
     func sceneWillEnterForeground(_ scene: UIScene) {
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
+#if HEADUNIT_WIRELESS_ONLY
+        (window?.rootViewController as? MainViewController)?.applicationDidEnterBackground()
+#endif
     }
 }

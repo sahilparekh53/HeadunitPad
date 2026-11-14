@@ -3,7 +3,7 @@ name: Build iPad mini 4
 on:
   workflow_dispatch:
   push:
-    branches: [mini4-wireless]
+    branches: [mini4-wireless, mini4-seamless]
   pull_request:
     paths:
       - 'HeadunitPad/**'
@@ -71,4 +71,3 @@ jobs:
             ~/.ios-simulator-skill/xcresults/*.xcresult
             ${{ runner.temp }}/mini4-launch.png
           if-no-files-found: ignore
-

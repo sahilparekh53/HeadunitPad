@@ -1,3 +1,31 @@
+# Seamless iPad mini 4 experience — 2026-11-15
+
+The user confirms Android Auto video, audio and touch work with the Galaxy S24.
+New authorized scope: compare Open Headunit's published source and official APK,
+improve startup/reconnect and native iPad UI, optimize the existing A8/iPadOS 15
+wireless path, and prepare a permanent-install route. Preserve the proven AAP,
+TLS, video, audio and touch protocol. Match supported user-facing behavior,
+without promising Android-specific Wi-Fi Direct/Bluetooth or boot auto-launch.
+
+One active task: seamless wireless experience and verified release.
+1. Inspect official APK/source and relevant skills; record provenance and behavior comparison.
+2. Implement remembered successful endpoint, opt-out automatic startup, bounded reconnect,
+   manual-stop behavior, foreground recovery, clear connection UI and session screen wake.
+3. Keep 720p/30 FPS as the mini 4 starting profile; reduce per-packet release logging.
+4. Run meaningful preference/reconnect tests, existing transport/parser tests, simulator launch
+   and screenshots, generic iOS 15 build, and package verification on hosted macOS.
+5. Deliver a new IPA and a reviewed permanent-install plan. TrollStore device writes,
+   Find My changes, modified-backup restore and system-app replacement require a separate
+   explicit device-setup decision after the concrete procedure is presented.
+
+Acceptance: successful session remembered; reconnect/open does not require retyping a known
+phone IP; Stop prevents automatic restart during the current app session; retry work is
+cancelled while inactive; first successful phone selection remains user-controlled; a bad
+saved endpoint falls back to discovery; UI stays responsive and has accessible controls.
+Performance claims must distinguish code-level changes from measurements on the real iPad.
+
+---
+
 # Local iPad mini 4 adaptation — 2026-11-13
 
 The user requests HeadunitPad for iPad mini 4, iPadOS 15.8.5, Galaxy S24,

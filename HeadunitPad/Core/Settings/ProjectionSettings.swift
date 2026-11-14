@@ -124,6 +124,8 @@ enum ProjectionConnectionMode: Int {
 }
 
 enum ProjectionSettings {
+    static let connectionPreferences = ConnectionPreferences()
+
     private static let defaults = UserDefaults.standard
     private static let videoResolutionKey = "projection-video-resolution"
     private static let fpsLimitKey = "projection-fps-limit"

@@ -2,14 +2,14 @@ schema_version: 1
 project: HeadunitPad Wired Android Auto
 
 current_phase:
-  id: mini4_compatibility
-  name: iPadOS 15 wireless adaptation
+  id: mini4_seamless
+  name: Seamless wireless experience and permanent-install preparation
   status: in_progress
 
 current_task:
-  id: mini4_wireless_build
-  name: Prepare and validate iPadOS 15 wireless IPA
-  status: completed
+  id: mini4_seamless_release
+  name: Reference analysis, connection lifecycle, professional UI and verified IPA
+  status: in_progress
 
 upstream_phase_4_progress:
   completed:
@@ -421,3 +421,10 @@ mini4_delivery:
     - Confirm AltStore installation and import the unsigned IPA on the iPad.
     - Connect the S24 and complete MINI4-SETUP.md acceptance checklist.
   next_task: Physical iPad mini 4 and Galaxy S24 wireless acceptance testing.
+
+seamless_baseline:
+  user_verified: Android Auto connects and works, including video, audio and touch.
+  reference: andreknieriem/open-headunit official source and v.4.0.0 release APK.
+  skills_installed: [android-reverse-engineering, swift-coding-standards, ios-code-review]
+  current_scope: Preserve the working protocol and improve supported iPad behavior.
+  device_changes: No TrollStore injection, modified backup, system app replacement or Find My changes performed.
